@@ -1,68 +1,13 @@
+#include "../header/lexer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
 
-typedef enum {
-    SEMI,
-    OPEN_PARENTHESIS,
-    CLOSED_PARENTHESIS,
-    OPEN_BRACE,
-    CLOSED_BRACE,
-    CHARACTER,
-    STRING_LITERAL
-} TypeSeparators;
-
-typedef enum {
-    INTEGER,
-    FLOAT
-} TypeNumeric;
-
-typedef enum {
-    EXIT,
-    RETURN,
-    MAIN,
-    CLASS,
-    IF,
-    ELSE,
-    IFELSE,
-    WHILE,
-    DO,
-    BREAK,
-    UNKNOWN_KEYWORD
-} TypeKeyword;
-
-typedef enum {
-    ADDITION,
-    SUBTRACTION,
-    MULTIPLICATION,
-    DIVISION,
-    GREATER_THAN,
-    LESS_THAN,
-    EQUAL_TO
-} TypeOperations;
-
-typedef struct {
-    TypeSeparators separatorType;
-    TypeKeyword keywordType;
-    TypeOperations operationType;
-    TypeNumeric numericType;
-    union {
-        int intValue;
-        float floatValue;
-    } value;
-    char *word;
-} Token;
-
 const char *keywords[] = {
     "exit", "return", "main", "class", "if", "else", "ifelse", "while", "do", "break"
 };
-#define NUM_KEYWORDS (sizeof(keywords) / sizeof(keywords[0]))
-
-Token readFullWord(char current_char, FILE *file);
-Token readStringLiteral(FILE *file);
-Token readNumber(FILE *file);
 
 Token readFullWord(char current_char, FILE *file) {
     Token token;
@@ -73,7 +18,7 @@ Token readFullWord(char current_char, FILE *file) {
 
     token.word[word_index++] = current_char;
 
-    while (isalpha((current_char = fgetc(file))) && current_char != EOF) {
+    while (isalpha((current_char = fgetc(file))) || current_char == '_') {
         if (word_index >= buffer_size - 1) {
             buffer_size *= 2;
             token.word = (char *)realloc(token.word, buffer_size * sizeof(char));
@@ -123,7 +68,7 @@ Token readStringLiteral(FILE *file) {
     token.word[index] = '\0';
 
     if (current_char != '"') {
-        fprintf(stderr, "Error: Missing a quote\n");
+        fprintf(stderr, "Error: Missing closing quote\n");
         free(token.word);
         token.word = NULL;
     }
@@ -166,21 +111,60 @@ Token readNumber(FILE *file) {
 }
 
 void lexer(FILE *file) {
-    char current_char = fgetc(file);
+    char current_char;
     
-    while (current_char != EOF) {
+    while ((current_char = fgetc(file)) != EOF) {
         if (current_char == ';') {
             printf("found Semicolon\n");
         } else if (current_char == '(') {
-            printf("found open par\n");
+            printf("found open parenthesis\n");
         } else if (current_char == ')') {
-            printf("found closed par\n");
-        } else if (isalpha(current_char)) {
+            printf("found closed parenthesis\n");
+        } else if (current_char == '{') {
+            printf("found open brace\n");
+        } else if (current_char == '}') {
+            printf("found closed brace\n");
+        } else if (current_char == '[') {
+            printf("found open bracket\n");
+        } else if (current_char == ']') {
+            printf("found closed bracket\n");
+        } else if (current_char == ',') {
+            printf("found comma\n");
+        } else if (current_char == '.') {
+            printf("found dot\n");
+        } else if (current_char == ':') {
+            printf("found colon\n");
+        } else if (current_char == '+') {
+            printf("found addition\n");
+        } else if (current_char == '-') {
+            printf("found subtraction\n");
+        } else if (current_char == '*') {
+            printf("found multiplication\n");
+        } else if (current_char == '/') {
+            char next_char = fgetc(file);
+            if (next_char == '/') {
+                while (current_char != '\n' && current_char != EOF) {
+                    current_char = fgetc(file);
+                }
+                continue;
+            } else {
+                fseek(file, -1, SEEK_CUR);
+                printf("found division\n");
+            }
+        } else if (current_char == '>') {
+            printf("found greater than\n");
+        } else if (current_char == '<') {
+            printf("found less than\n");
+        } else if (current_char == '=') {
+            printf("found equal to\n");
+        } else if (current_char == '!') {
+            printf("found not equal to\n");
+        } else if (isalpha(current_char) || current_char == '_') {
             Token token_char = readFullWord(current_char, file);
-            printf("is a keyword: %s\n", token_char.word);
-            free(token_char.word); 
+            printf("identifier/keyword: %s\n", token_char.word);
+            free(token_char.word);
         } else if (isdigit(current_char) || current_char == '.') {
-            fseek(file, -1, SEEK_CUR); 
+            fseek(file, -1, SEEK_CUR);
             Token token = readNumber(file);
             if (token.numericType == INTEGER) {
                 printf("integer value %d\n", token.value.intValue);
@@ -193,19 +177,10 @@ void lexer(FILE *file) {
                 printf("string literal: %s\n", token_str.word);
                 free(token_str.word);
             }
+        } else if (isspace(current_char)) {
+            continue;
+        } else {
+            printf("Unknown character: %c\n", current_char);
         }
-        current_char = fgetc(file);
     }
-}
-
-int main() {
-    FILE *file;
-    file = fopen("code.jlang", "r");
-    if (!file) {
-        fprintf(stderr, "Error opening file\n");
-        return 1;
-    }
-    lexer(file);
-    fclose(file);
-    return 0;
 }
