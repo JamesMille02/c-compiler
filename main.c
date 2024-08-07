@@ -6,12 +6,25 @@
 typedef enum {
     SEMI,
     OPEN_PARENTHESIS,
-    CLOSED_PARENTHESIS
+    CLOSED_PARENTHESIS,
+    OPEN_BRACE,
+    CLOSED_BRACE,
+    SEMICOLON,
 } TypeSeparator;
 
 typedef enum{
-    CHARACTER,
+    EXIT,
+    RETURN,
+    MAIN,
+    CLASS,
 } TypeKeyword;
+
+typedef enum{
+    ADDITION,
+    SUBTRACTION,
+    MULTIPLICATION,
+    DIVISION,
+} TypeOperations;
 
 typedef enum {
     INT,
@@ -22,6 +35,7 @@ typedef struct{
     TypeSeparator separatorType;
     TypeInteger integerType;
     TypeKeyword keywordType;
+    TypeOperations operationType;
     int value;
     char character;
     char word[256];
