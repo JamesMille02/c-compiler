@@ -10,30 +10,27 @@ typedef enum {
 } TypeSeparator;
 
 typedef enum{
-    EXIT,
+    CHARACTER,
 } TypeKeyword;
 
 typedef enum {
     INT,
 } TypeInteger;
 
-typedef struct {
-    TypeKeyword keywordType;
-    char character;
-} TokenKeyword;
 
 typedef struct{
     TypeSeparator separatorType;
     TypeInteger integerType;
+    TypeKeyword keywordType;
     int value;
     char character;
+    char word[256];
 } Token;
 
 Token readFullNumber(char current_char, FILE *file) {
     Token token;
     token.integerType = INT;
-    int value = 0;
-    value = current_char - '0';
+    int value = current_char - '0';
     while (isdigit((current_char = fgetc(file))) && current_char != EOF) {
         value = value * 10 + (current_char - '0');
     }
@@ -43,6 +40,26 @@ Token readFullNumber(char current_char, FILE *file) {
     token.value = value;
     return token;
 }
+
+Token readFullWord(char current_char, FILE *file) {
+    Token token;
+    token.keywordType = CHARACTER;
+    int word_index = 0;
+
+    token.word[word_index++] = current_char;
+
+    while (isalpha((current_char = fgetc(file))) && current_char != EOF) {
+        if(word_index < sizeof(token.word) -1){
+            token.word[word_index++] = current_char;
+        }
+    }
+    token.word[word_index] = '\0';
+    if (current_char != EOF) {
+        fseek(file, -1, SEEK_CUR);
+    }
+    return token;
+}
+
 
 void lexer(FILE *file){
     char current_char = fgetc(file);
@@ -55,7 +72,8 @@ void lexer(FILE *file){
         } else if (current_char == ')') {
             printf("found closed par \n");
         } else if (isalpha(current_char)) {
-            printf("is a character: %c\n", current_char);
+            Token token = readFullWord(current_char, file);
+            printf("is a word: %s\n", token.word);
         } else if (isdigit(current_char)) {
             Token token_int_test = readFullNumber(current_char, file);
             printf("token value %d\n", token_int_test.value);
