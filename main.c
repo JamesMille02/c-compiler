@@ -15,17 +15,34 @@ typedef enum{
 
 typedef enum {
     INT,
-} TypeLiteral;
+} TypeInteger;
 
 typedef struct {
     TypeKeyword keywordType;
+    char character;
+} TokenKeyword;
+
+typedef struct{
     TypeSeparator separatorType;
-    TypeLiteral literalType;
+    TypeInteger integerType;
     int value;
     char character;
 } Token;
 
-
+Token readFullNumber(char current_char, FILE *file) {
+    Token token;
+    token.integerType = INT;
+    int value = 0;
+    value = current_char - '0';
+    while (isdigit((current_char = fgetc(file))) && current_char != EOF) {
+        value = value * 10 + (current_char - '0');
+    }
+    if (current_char != EOF) {
+        fseek(file, -1, SEEK_CUR);
+    }
+    token.value = value;
+    return token;
+}
 
 void lexer(FILE *file){
     char current_char = fgetc(file);
@@ -38,23 +55,10 @@ void lexer(FILE *file){
         } else if (current_char == ')') {
             printf("found closed par \n");
         } else if (isalpha(current_char)) {
-            printf("is a character \n");
+            printf("is a character: %c\n", current_char);
         } else if (isdigit(current_char)) {
-            char s1[20] ={0};
-            int index = 0;
-            
-            while(isdigit(current_char) && index < sizeof(s1) -1) {
-                s1[index++] = current_char;
-                current_char = fgetc(file);
-            }
-            s1[index] = '\0';
-            int combined_int = atoi(s1);
-            printf("combined digit: %d\n", combined_int);
-
-            if (!isdigit(current_char)) {
-                fseek(file, -1, SEEK_CUR);
-            }  
-        } else {
+            Token token_int_test = readFullNumber(current_char, file);
+            printf("token value %d\n", token_int_test.value);
         }
         current_char = fgetc(file);
     }
