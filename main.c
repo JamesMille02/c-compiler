@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <math.h>
 
 typedef enum {
     SEMI,
@@ -10,13 +11,13 @@ typedef enum {
     OPEN_BRACE,
     CLOSED_BRACE,
     CHARACTER,
-    STRING_LITERAL,
-    SINGLE_QUOTE
+    STRING_LITERAL
 } TypeSeparators;
 
 typedef enum {
-    INTEGER
-} TypeInteger;
+    INTEGER,
+    FLOAT
+} TypeNumeric;
 
 typedef enum {
     EXIT,
@@ -46,8 +47,11 @@ typedef struct {
     TypeSeparators separatorType;
     TypeKeyword keywordType;
     TypeOperations operationType;
-    TypeInteger integerType;
-    int value;
+    TypeNumeric numericType;
+    union {
+        int intValue;
+        float floatValue;
+    } value;
     char *word;
 } Token;
 
@@ -55,6 +59,10 @@ const char *keywords[] = {
     "exit", "return", "main", "class", "if", "else", "ifelse", "while", "do", "break"
 };
 #define NUM_KEYWORDS (sizeof(keywords) / sizeof(keywords[0]))
+
+Token readFullWord(char current_char, FILE *file);
+Token readStringLiteral(FILE *file);
+Token readNumber(FILE *file);
 
 Token readFullWord(char current_char, FILE *file) {
     Token token;
@@ -87,7 +95,7 @@ Token readFullWord(char current_char, FILE *file) {
     }
 
     if (token.keywordType == UNKNOWN_KEYWORD) {
-        fprintf(stderr, "Error: Unknown keyword: '%s'\n", token.word);
+        fprintf(stderr, "Error: Unknown keyword '%s'\n", token.word);
         free(token.word);
         exit(EXIT_FAILURE);
     }
@@ -115,24 +123,45 @@ Token readStringLiteral(FILE *file) {
     token.word[index] = '\0';
 
     if (current_char != '"') {
-        fprintf(stderr, "Error: Unclosed string literal\n");
+        fprintf(stderr, "Error: Missing a quote\n");
+        free(token.word);
+        token.word = NULL;
     }
 
     return token;
 }
 
-Token readFullNumber(char current_char, FILE *file) {
+Token readNumber(FILE *file) {
     Token token;
-    token.integerType = INTEGER;
-    int value = 0;
-    value = current_char - '0';
-    while (isdigit((current_char = fgetc(file))) && current_char != EOF) {
-        value = value * 10 + (current_char - '0');
+    token.word = NULL;
+
+    char current_char;
+    char buffer[256];
+    int index = 0;
+    int buffer_size = sizeof(buffer);
+    
+    while (isdigit((current_char = fgetc(file))) || current_char == '.') {
+        if (index >= buffer_size - 1) {
+            fprintf(stderr, "Error: Number exceeds buffer size\n");
+            exit(EXIT_FAILURE);
+        }
+        buffer[index++] = current_char;
     }
+
     if (current_char != EOF) {
         fseek(file, -1, SEEK_CUR);
     }
-    token.value = value;
+
+    buffer[index] = '\0';
+
+    if (strchr(buffer, '.') != NULL) {
+        token.numericType = FLOAT;
+        token.value.floatValue = strtof(buffer, NULL);
+    } else {
+        token.numericType = INTEGER;
+        token.value.intValue = atoi(buffer);
+    }
+
     return token;
 }
 
@@ -150,14 +179,20 @@ void lexer(FILE *file) {
             Token token_char = readFullWord(current_char, file);
             printf("is a keyword: %s\n", token_char.word);
             free(token_char.word); 
-        } else if (isdigit(current_char)) {
-            Token token_int = readFullNumber(current_char, file);
-            printf("token value %d\n", token_int.value);
+        } else if (isdigit(current_char) || current_char == '.') {
+            fseek(file, -1, SEEK_CUR); 
+            Token token = readNumber(file);
+            if (token.numericType == INTEGER) {
+                printf("integer value %d\n", token.value.intValue);
+            } else if (token.numericType == FLOAT) {
+                printf("float value %f\n", token.value.floatValue);
+            }
         } else if (current_char == '"') {
             Token token_str = readStringLiteral(file);
-            if (token_str != "error")
-            printf("string literal: %s\n", token_str.word);
-            free(token_str.word); 
+            if (token_str.word != NULL) {
+                printf("string literal: %s\n", token_str.word);
+                free(token_str.word);
+            }
         }
         current_char = fgetc(file);
     }
