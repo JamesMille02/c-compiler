@@ -14,8 +14,8 @@ typedef enum {
     COMMA,
     DOT,
     COLON,
-    CHARACTER,
     STRING_LITERAL,
+    CHARACTER,
     UNKNOWN
 } TypeSeparators;
 
@@ -52,7 +52,15 @@ typedef enum {
     OR
 } TypeOperations;
 
+typedef enum {
+    SEPARATOR,
+    KEYWORD,
+    OPERATION,
+    NUMERIC
+} TokenType;
+
 typedef struct {
+    TokenType type;
     TypeSeparators separatorType;
     TypeKeyword keywordType;
     TypeOperations operationType;
@@ -71,5 +79,6 @@ Token readFullWord(char current_char, FILE *file);
 Token readStringLiteral(FILE *file);
 Token readNumber(FILE *file);
 void lexer(FILE *file);
+const char* getTokenTypeString(Token token);
 
 #endif 
