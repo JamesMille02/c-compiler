@@ -1,12 +1,20 @@
-#include "../header/lexer.h"
+#include <stdio.h>
+#include "lexer.h"
 
 int main() {
     FILE *file = fopen("jlang/code.jlang", "r");
     if (!file) {
-        fprintf(stderr, "Error opening file\n");
-        return 1;
+        perror("Failed to open file");
+        return EXIT_FAILURE;
     }
-    lexer(file);
-    fclose(file);
-    return 0;
+
+    Token *tokens = lexer(file);
+    
+    for (size_t i = 0; tokens[i].type != END_OF_TOKENS; i++) {
+        print_token(&tokens[i]);  
+        free_token(&tokens[i]);   
+    }
+
+    free(tokens);
+    return EXIT_SUCCESS;
 }
