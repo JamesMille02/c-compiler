@@ -37,6 +37,9 @@ void print_token(Token *token) {
         case COMP:
             printf(" TOKEN TYPE: COMPARATOR\n");
             break;
+        case INDENT:
+            printf(" TOKEN TYPE: INDENTATION\n");
+            break;
         case END_OF_TOKENS:
             printf(" END OF TOKENS\n");
             break;
@@ -45,6 +48,7 @@ void print_token(Token *token) {
             break;
     }
 }
+
 
 void free_token(Token *token) {
     if (token->value) {
@@ -148,6 +152,19 @@ Token *generate_separator_or_operator(char *current, int *current_index, TokenTy
     return token;
 }
 
+Token *generate_indent_token(int indent_level){
+    Token *token = malloc(sizeof(Token));
+    token->line_num = line_number;
+    token->type = INDENT;
+    
+    char *value = malloc(16);
+    sprintf(value, "INDENT_%d", indent_level);
+    token->value = value;
+    
+    return token;
+}
+
+
 size_t tokens_index;
 
 Token *lexer(FILE *file){
@@ -204,6 +221,16 @@ Token *lexer(FILE *file){
             current_index--;
         } else if(current[current_index] == '\n'){
             line_number += 1;
+            int indent_level = 0;
+            current_index++;
+            while(current[current_index] == ' ' || current[current_index] == '\t'){
+                indent_level += (current[current_index] == ' ') ? 1 : 4;  
+                current_index++;
+            }
+            token = generate_indent_token(indent_level);
+            tokens[tokens_index] = *token;
+            tokens_index++;
+            current_index--;
         } 
         free(token);
         current_index++;

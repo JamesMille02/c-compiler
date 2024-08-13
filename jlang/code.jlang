@@ -1,2 +1,9 @@
-exit(12)
-exit(11)
+def assignf():
+    f = 1
+
+def main():
+    print(f)
+                    return
+
+def exit():
+    exit(1)
